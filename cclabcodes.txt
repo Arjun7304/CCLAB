@@ -1,0 +1,73 @@
+LAMBDA CODE:
+
+
+import boto3
+from uuid import uuid4
+def lambda_handler(event, context):
+    s3 = boto3.client("s3")
+    dynamodb = boto3.resource('dynamodb')
+    for record in event['Records']:
+        bucket_name = record['s3']['bucket']['name']
+        object_key = record['s3']['object']['key']
+        size = record['s3']['object'].get('size', -1)
+        event_name = record ['eventName']
+        event_time = record['eventTime']
+        dynamoTable = dynamodb.Table('newtable')
+        dynamoTable.put_item(
+            Item={'unique': str(uuid4()), 'Bucket': bucket_name, 'Object': object_key,'Size': size, 'Event': event_name, 'EventTime': event_time})
+
+
+SQS CODE:
+console.log('Loading function');
+
+export const handler = async (event, context) => {
+  for (const record of event.Records) {
+    const messageBody = record.body;
+    console.log("Raw message body:", messageBody);
+
+    try {
+      const data = JSON.parse(messageBody);
+      console.log('value1 =', data.key1);
+      console.log('value2 =', data.key2);
+      console.log('value3 =', data.key3);
+    } catch (err) {
+      console.error("Error parsing message body:", err);
+    }
+  }
+
+  return "SQS message(s) processed";
+};
+
+SNS CODE:
+{
+    "Version": "2012-10-17",
+    "Id": "example-ID",
+    "Statement": [
+        {
+            "Sid": "Example SNS topic policy",
+            "Effect": "Allow",
+            "Principal": {
+                "Service": "s3.amazonaws.com"
+            },
+            "Action": [
+                "SNS:Publish"
+            ],
+            "Resource": "SNS-topic-ARN",
+            "Condition": {
+                "ArnLike": {
+                    "aws:SourceArn": "arn:aws:s3:::amzn-s3-demo-bucket"
+                },
+                "StringEquals": {
+                    "aws:SourceAccount": "bucket-owner-account-id"
+                }
+            }
+        }
+    ]
+}
+
+IAM ROLE COMMANDS:
+aws configure 
+aws s3 ls
+aws s3 mb s3://bucket-name;
+aws s3api create-bucket --bucket 58z-bucketclimumbai --region ap-south-1 --create-bucket-configuration LocationConstraint=ap-south-1
+aws ec2 describe-instances --region ap-south-1
